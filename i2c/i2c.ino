@@ -21,30 +21,20 @@ const int trigPin3 = 7;
 const int echoPin3 = 6;
 
 ICM_20948_I2C myICM;
+
+
 void setup() {
   // put your setup code here, to run once:
-// Initialize ultrasonic sensor pins
-  pinMode(trigPin1, OUTPUT);
-  pinMode(echoPin1, INPUT);
-  pinMode(trigPin2, OUTPUT);
-  pinMode(echoPin2, INPUT);
-  pinMode(trigPin3, OUTPUT);
-  pinMode(echoPin3, INPUT);
-  
-  WIRE_PORT.begin();
-  WIRE_PORT.setClock(400000);
-  myICM.begin(WIRE_PORT, AD0_VAL);
-  Serial.begin(9600);
+  // Initialize ultrasonic sensor pins
+  initSensors();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-// Read ultrasonic sensor measurements
-  double d1_meas = readUltrasonic(trigPin1, echoPin1);
-  double d2_meas = readUltrasonic(trigPin2, echoPin2);
-  double d3_meas = readUltrasonic(trigPin3, echoPin3); 
-  //Serial.print("Right Distance: ");
-  //Serial.println(d3_meas);  
+  // Read ultrasonic sensor measurements
+  float d1_meas = readUltrasonic(trigPin1, echoPin1);
+  float d2_meas = readUltrasonic(trigPin2, echoPin2);
+  float d3_meas = readUltrasonic(trigPin3, echoPin3); 
   getIMU();
   
   // send the sensor data over i2c as an array of bytes
@@ -66,23 +56,42 @@ void getIMU(){
     float gx = sensor->gyrX();
     float gy = sensor->gyrY();
     float gz = sensor->gyrZ();       
-    /*Serial.print("Ax: ");
+    //printData(x, y, z, gx, gy, gz);
+  } 
+}
+void printData(float x, float y, float z, float gx, float gy, float gz){
+  Serial.print("Ax: ");
     Serial.println(x);
     Serial.print("Ay: ");
     Serial.println(y);
     Serial.print("Az: ");
-    Serial.println(z);*/
-    /*Serial.print("Gx: ");
+    Serial.println(z);
+    Serial.print("Gx: ");
     Serial.println(gx);
     Serial.print("Gy: ");
     Serial.println(gy);
     Serial.print("Gz: ");
-    Serial.println(gz);*/ 
-  } 
+    Serial.println(gz); 
+}
+void printSensorData(float sensorData){
+  Serial.print("Sensor: ");
+  Serial.println(sensorData);
+}
+void initSensors(){
+  pinMode(trigPin1, OUTPUT);
+  pinMode(echoPin1, INPUT);
+  pinMode(trigPin2, OUTPUT);
+  pinMode(echoPin2, INPUT);
+  pinMode(trigPin3, OUTPUT);
+  pinMode(echoPin3, INPUT);
+  
+  WIRE_PORT.begin();
+  WIRE_PORT.setClock(400000);
+  myICM.begin(WIRE_PORT, AD0_VAL);
+  Serial.begin(9600);  
 }
 
-
-double readUltrasonic(int trigPin, int echoPin) {
+float readUltrasonic(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
