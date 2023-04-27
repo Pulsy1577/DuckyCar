@@ -6,6 +6,7 @@
 // Adafruit_DCMotor *myMotor = AFMS.getMotor(1);
 // Adafruit_DCMotor *myMotor2 = AFMS.getMotor(2);
 int dirs = {1,0,1,0,1} //0 for left 1 for right
+int heading = 0
 void setup() {
   //Initialize everything
 

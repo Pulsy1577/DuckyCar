@@ -14,7 +14,8 @@ void setup() {
 }
 
 void loop() {
-
+  myMotor->run(FORWARD);
+  myMotor2->run(FORWARD);
   char cmd = Serial.read();
   if(cmd == 's'){
     myMotor->run(FORWARD);
