@@ -30,11 +30,12 @@ Adafruit_DCMotor *myMotor = AFMS.getMotor(1);
 Adafruit_DCMotor *myMotor2 = AFMS.getMotor(2);
 float d1_meas = 100;
 
+float lastDistVal[] = {0,0,0}
+
 void setup() {
   AFMS.begin();
   myMotor->setSpeed(150);
   myMotor2->setSpeed(150);
-  // put your setup code here, to run once:
   // Initialize ultrasonic sensor pins
   initSensors();
 
@@ -50,8 +51,12 @@ void loop() {
   //printSensorData(d1_meas);
   Serial.println((d1_meas));
   if ((d1_meas) < 6){
-    stop();
+    turnRight();
   }
+else {
+  myMotor->run(FORWARD);
+  myMotor2->run(FORWARD);
+}  
 
   d1_meas = readUltrasonic(trigPin1, echoPin1);
   float d2_meas = readUltrasonic(trigPin2, echoPin2);
@@ -66,6 +71,11 @@ void loop() {
   Wire.endTransmission(); // stop transmitting
   //z << d1_meas, d2_meas, d3_meas;
   //delay(2000);
+
+
+  lastDistVal[0] = d1_meas
+  lastDistVal[1] = d2_meas
+  lastDistVal[2] = d3_meas
 }
 
 //End loop 
@@ -134,3 +144,23 @@ void stop(){
   myMotor->setSpeed(0);
   myMotor2->setSpeed(0);
 }
+
+void turnRight(){
+  Serial.println("Turning Right");
+  myMotor->run(BACKWARD);
+  myMotor2->run(FORWARD);
+}
+
+void avoidRight(){
+  float meas = readUltrasonic(trigPin1, echoPin1);
+  while (meas < 8){
+    meas = readUltrasonic(trigPin1, echoPin1);
+    turnRight();
+  }
+  delay(1000);
+  myMotor->run(FORWARD);
+  myMotor2->run(FORWARD);
+
+}
+
+
