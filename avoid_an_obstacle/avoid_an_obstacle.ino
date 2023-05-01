@@ -29,14 +29,19 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *myMotor = AFMS.getMotor(1);
 Adafruit_DCMotor *myMotor2 = AFMS.getMotor(2);
 float d1_meas = 100;
+float heading = 0;
 
-float lastDistVal[] = {0,0,0}
+float lastDistVal[] = {0,0,0};
+
+unsigned long sensor_timer;
 
 void setup() {
+  
   AFMS.begin();
   myMotor->setSpeed(150);
   myMotor2->setSpeed(150);
   // Initialize ultrasonic sensor pins
+
   initSensors();
 
 }
@@ -49,14 +54,16 @@ void loop() {
   // Read ultrasonic sensor measurements
 
   //printSensorData(d1_meas);
-  Serial.println((d1_meas));
+  //Serial.println((d1_meas));
+  //obstacle avoidance
   if ((d1_meas) < 6){
     turnRight();
   }
-else {
-  myMotor->run(FORWARD);
-  myMotor2->run(FORWARD);
-}  
+  if (heading >= 90) {
+    myMotor->run(FORWARD);
+    myMotor2->run(FORWARD);
+  }
+  
 
   d1_meas = readUltrasonic(trigPin1, echoPin1);
   float d2_meas = readUltrasonic(trigPin2, echoPin2);
@@ -72,10 +79,20 @@ else {
   //z << d1_meas, d2_meas, d3_meas;
   //delay(2000);
 
+  ICM_20948_I2C *sensor = &myICM;
+  float z = sensor->gyrZ(); 
 
-  lastDistVal[0] = d1_meas
-  lastDistVal[1] = d2_meas
-  lastDistVal[2] = d3_meas
+  float delta_s = (millis() - sensor_timer);
+
+  heading += z * (delta_s/1000);
+  sensor_timer = millis();
+  Serial.println(heading);
+
+  
+  lastDistVal[0] = d1_meas;
+  lastDistVal[1] = d2_meas;
+  lastDistVal[2] = d3_meas;
+
 }
 
 //End loop 
@@ -126,6 +143,7 @@ void initSensors(){
   
   WIRE_PORT.begin();
   WIRE_PORT.setClock(400000);
+  sensor_timer = millis();
   myICM.begin(WIRE_PORT, AD0_VAL);
   Serial.begin(9600);  
 }
@@ -157,9 +175,6 @@ void avoidRight(){
     meas = readUltrasonic(trigPin1, echoPin1);
     turnRight();
   }
-  delay(1000);
-  myMotor->run(FORWARD);
-  myMotor2->run(FORWARD);
 
 }
 
