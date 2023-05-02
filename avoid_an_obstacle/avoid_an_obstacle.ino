@@ -58,17 +58,17 @@ void loop() {
   heading += z * (delta_s/1000);
   sensor_timer = millis();
 
-  myMotor->run(FORWARD);
-  myMotor2->run(FORWARD);
+  // myMotor->run(FORWARD);
+  // myMotor2->run(FORWARD);
   
   d1_meas = readUltrasonic(trigPin1, echoPin1);
   float d2_meas = readUltrasonic(trigPin2, echoPin2);
   float d3_meas = readUltrasonic(trigPin3, echoPin3);
 
-  Serial.println(d1_meas);
-  if ((d1_meas) < 6){
-    turnLeft90();
-  }
+  // Serial.println(d1_meas);
+  // if ((d1_meas) < 6){
+  //   turnLeft90();
+  // }
 
   getIMU();
 
@@ -80,9 +80,17 @@ void loop() {
   //z << d1_meas, d2_meas, d3_meas;
   //delay(2000);
 
+  Serial.print("Curr dist ");
+  Serial.println(d2_meas);
+  Serial.print("last dist ");
+  Serial.println(lastDistVal[1]);
+  detectPath(d2_meas, lastDistVal[1]);
+
   lastDistVal[0] = d1_meas;
   lastDistVal[1] = d2_meas;
   lastDistVal[2] = d3_meas;
+
+  
 
 }
 
@@ -103,27 +111,6 @@ void getIMU(){
   } 
 }
 
-void printData(float x, float y, float z, float gx, float gy, float gz){
-  // Serial.print("Ax: ");
-  //   Serial.println(x);
-  //   Serial.print("Ay: ");
-  //   Serial.println(y);
-  //   Serial.print("Az: ");
-  //   Serial.println(z);
-    Serial.print("Gx: ");
-    Serial.println(gx);
-    Serial.print("Gy: ");
-    Serial.println(gy);
-    Serial.print("Gz: ");
-    Serial.println(gz);
-    Serial.println("");
-    delay(3000);
-     
-}
-void printSensorData(float sensorData){
-  Serial.print("Sensor: ");
-  Serial.println(sensorData);
-}
 
 void initSensors(){
   pinMode(trigPin1, OUTPUT);
@@ -197,6 +184,15 @@ int turnLeft90(){
 void correctAngle(){
   
 }
+
+int detectPath(float currDist,float lastDist) {
+  if (currDist > 20 && lastDist > 20 ) {
+    //Serial.println("Path detected");
+    return 0;
+  }
+  return 1;
+}
+
 
 void avoidRight(){
   float meas = readUltrasonic(trigPin1, echoPin1);
