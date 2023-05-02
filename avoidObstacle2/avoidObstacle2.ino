@@ -33,54 +33,49 @@ float d1_meas = 100;
 //float lastDistVal[] = {0,0,0};
 
 unsigned long sensor_timer;
-    class Filter : public TinyEKF {
-public:
-    Filter()
-    {   
-        // approximate the process noise                  
-        this->setQ(0, 0, .0001);
-        this->setQ(1, 1, .0001);
-        // same for measurement noise
-        this->setR(0, 0, .0001);
-        this->setR(1, 1, .0001);
-        this->setR(2, 2, .0001);
-        this->setR(3, 3, .0001);
-        this->setR(4, 4, .0001);
-        this->setR(5, 5, .0001);
-    }
-protected:
-    void model(double fx[Nsta], double F[Nsta][Nsta], double hx[Mobs], double H[Mobs][Nsta])
-    {
-    // Process model: x(k) = f(x(k-1))
-    fx[0] = this->x[0] + this->x[1]; // heading update
-    fx[1] = this->x[1]; // angular velocity update
 
-    // State transition matrix: F(k) = df(x(k))/dx(k-1)
-    F[0][0] = 1; 
-    F[0][1] = 1;
-    F[1][1] = 1;
+class Filter : public TinyEKF {
+  public:
+      Filter()
+      {   
+          // approximate the process noise                  
+          this->setQ(0, 0, .0001);
+          this->setQ(1, 1, .0001);
+          // same for measurement noise
+          this->setR(0, 0, .0001);
+          this->setR(1, 1, .0001);
+          this->setR(2, 2, .0001);
+          this->setR(3, 3, .0001);
+          this->setR(4, 4, .0001);
+          this->setR(5, 5, .0001);
+      }
+  protected:
+      void model(double fx[Nsta], double F[Nsta][Nsta], double hx[Mobs], double H[Mobs][Nsta])
+      {
+      // Process model: x(k) = f(x(k-1))
+      fx[0] = this->x[0]; //+ this->x[1]; // heading update
+      fx[1] = this->x[1]; // angular velocity update
 
-    myICM.getAGMT();
+      // State transition matrix: F(k) = df(x(k))/dx(k-1)
+      F[0][0] = 1; 
+      F[1][1] = 1;
 
-    ICM_20948_I2C *sensor = &myICM;
-    // Observation model: z(k) = h(x(k))
-    hx[0] = this->x[0]; // heading measurement
-    hx[1] = this->x[1]; // angular velocity measurement
-    hx[2] = sensor->accX(); // accelerationX measurement
-    hx[3] = sensor->accY(); // accelerationY measurement
-    hx[4] = sensor->accZ(); // accelerationZ measurement
-    hx[5] = sensor->gyrX(); // gyroscopeX measurement
-    hx[6] = sensor->gyrY(); // gyroscopeY measurement
-    hx[7] = sensor->accZ(); // gyroscopeZ measurement
+      // Observation model: z(k) = h(x(k))
+      hx[0] = this->x[0]; // accelerationX measurement
+      hx[1] = this->x[1]; // accelerationY measurement
+      hx[2] = this->x[2]; // accelerationZ measurement
+      hx[3] = this->x[3]; // gyroscopeX measurement
+      hx[4] = this->x[4]; // gyroscopeY measurement
+      hx[5] = this->x[5]; // gyroscopeZ measurement
 
-    // Observation matrix: H(k) = dh(x(k))/dx(k)
-    H[0][0] = 1;
-    H[1][1] = 1;
-    H[2][2] = 1;
-    H[3][3] = 1;
-    H[4][4] = 1;
-    H[5][5] = 1;
-    }
+      // Observation matrix: H(k) = dh(x(k))/dx(k)
+      H[0][0] = 1;
+      H[1][1] = 1;
+      H[2][2] = 1;
+      H[3][3] = 1;
+      H[4][4] = 1;
+      H[5][5] = 1;
+      }
 };
 
 Filter ekf;
@@ -92,6 +87,7 @@ void setup() {
   // Initialize ultrasonic sensor pins
 
   initSensors();
+  ekf.setX(0, 0);
 
 }
 
@@ -104,24 +100,39 @@ void loop() {
   //obstacle avoidance
   //move();
 
-  getIMU();
-  
-  // send the sensor data over i2c as an array of bytes
-  //uint8_t sensor_data[] = {static_cast<uint8_t>(d1_meas), static_cast<uint8_t>(d2_meas), static_cast<uint8_t>(d3_meas)};
-  //Wire.beginTransmission(8); // transmit to device with address 8
-  //Wire.write(sensor_data, sizeof(sensor_data)); // sends sensor data
-  //Wire.endTransmission(); // stop transmitting
-  //z << d1_meas, d2_meas, d3_meas;
-  //delay(2000);
+  // getIMU();
+  myICM.getAGMT();
 
   ICM_20948_I2C *sensor = &myICM;
-  //float z = sensor->gyrZ(); 
+  double x = sensor->accX();
+  double y = sensor->accY();
+  double z = sensor->accZ();
+  double gx = sensor->gyrX();
+  double gy = sensor->gyrY();
+  double gz = sensor->gyrZ();
 
-  float delta_s = (millis() - sensor_timer);
+  double sh[6] = {x, y, z, gx, gy, gz};
 
-  //heading += z * (delta_s/1000);
-  sensor_timer = millis();
-  //Serial.println(heading);
+  ekf.step(sh);
+
+  Serial.print(sh[0]);
+  Serial.print(" accX | ");
+  Serial.print(sh[1]);
+  Serial.print(" accY | ");
+  Serial.print(sh[2]);
+  Serial.print(" accZ | ");
+  Serial.print(sh[3]);
+  Serial.print(" gX | ");
+  Serial.print(sh[4]);
+  Serial.print(" gY | ");
+  Serial.print(sh[5]);
+  Serial.println(" gZ | ");
+  Serial.print(ekf.getX(0));
+  Serial.print(" heading | ");
+  Serial.print(ekf.getX(1));
+  Serial.print(" angular velocity | ");
+  Serial.println("");
+  Serial.println("");
 
 }
 
@@ -138,28 +149,8 @@ void getIMU(){
     double gx = sensor->gyrX();
     double gy = sensor->gyrY();
     double gz = sensor->gyrZ();
-    double sh[6] = {x, y, z, gx, gy, gz};
-    ekf.step(sh);      
+
     // Report measured and predicte/fused values
-    Serial.print(sh[0]);
-    Serial.print(" accX | ");
-    Serial.print(sh[1]);
-    Serial.print(" accY | ");
-    Serial.print(sh[2]);
-    Serial.print(" accZ | ");
-    Serial.print(sh[3]);
-    Serial.print(" gX | ");
-    Serial.print(sh[4]);
-    Serial.print(" gY | ");
-    Serial.print(sh[5]);
-    Serial.println(" gZ | ");
-    Serial.print(ekf.getX(0));
-    Serial.print(" heading | ");
-    Serial.print(ekf.getX(1));
-    Serial.print(" velocity | ");
-    Serial.println("");
-    Serial.println("");
-    //printData(x, y, z, gx, gy, gz);
   } 
 }
 
@@ -253,6 +244,7 @@ bool checkRight(){
     return false;
   }
 }
+
 bool checkLeft(){
   if(readUltrasonic(trigPin2, echoPin2) > 10){
     return true;
@@ -261,6 +253,7 @@ bool checkLeft(){
     return false;
   }
 }
+
 int turnRight90(){
   float heading = 0;
   float target = 0 - 90;
