@@ -31,6 +31,7 @@ Adafruit_DCMotor *myMotor2 = AFMS.getMotor(2);
 float d1_meas = 100;
 float d2_meas = 0;
 float heading = 0;
+float curr_dir = 0;
 
 float lastDistVal[] = {0,0,0};
 
@@ -39,8 +40,8 @@ unsigned long sensor_timer;
 void setup() {
   
   AFMS.begin();
-  myMotor->setSpeed(150);
-  myMotor2->setSpeed(150);
+  myMotor->setSpeed(90);
+  myMotor2->setSpeed(90);
   // Initialize ultrasonic sensor pins
 
   initSensors();
@@ -50,6 +51,7 @@ void setup() {
 void loop() {
 
   ICM_20948_I2C *sensor = &myICM;
+
   float z = sensor->gyrZ(); 
 
   float delta_s = (millis() - sensor_timer);
@@ -63,9 +65,8 @@ void loop() {
   float d2_meas = readUltrasonic(trigPin2, echoPin2);
   float d3_meas = readUltrasonic(trigPin3, echoPin3);
 
+  Serial.println(d1_meas);
   if ((d1_meas) < 6){
-    Serial.println(d1_meas);
-    delay(2000);
     turnLeft90();
   }
 
@@ -123,6 +124,7 @@ void printSensorData(float sensorData){
   Serial.print("Sensor: ");
   Serial.println(sensorData);
 }
+
 void initSensors(){
   pinMode(trigPin1, OUTPUT);
   pinMode(echoPin1, INPUT);
@@ -165,6 +167,7 @@ void turnLeft(){
   myMotor2->run(BACKWARD);
 }
 
+
 int turnLeft90(){
 
   float target = heading - 90;
@@ -172,7 +175,7 @@ int turnLeft90(){
   myMotor->run(FORWARD);
   myMotor2->run(BACKWARD);
 
-  while (heading + 10 > target && heading - 10 > target){
+  while (heading >= target){
     ICM_20948_I2C *sensor = &myICM;
     float z = sensor->gyrZ(); 
     float delta_s = (millis() - sensor_timer);
@@ -187,9 +190,11 @@ int turnLeft90(){
     Serial.println(target);
     delay(100);
   }
-  myMotor->run(FORWARD);
-  myMotor2->run(FORWARD);
   return 0;
+  
+}
+
+void correctAngle(){
   
 }
 
