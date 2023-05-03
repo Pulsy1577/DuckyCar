@@ -1,6 +1,6 @@
 // These must be defined before including TinyEKF.h
 #define Nsta 2     // Two state values: pressure, temperature
-#define Mobs 6     // Three measurements: baro pressure, baro temperature, LM35 temperature
+#define Mobs 1     // Three measurements: baro pressure, baro temperature, LM35 temperature
 
 #define LM35_PIN 0
 #include <Wire.h> // for I2C communication
@@ -28,7 +28,7 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *rightMotor = AFMS.getMotor(1);
 Adafruit_DCMotor *leftMotor = AFMS.getMotor(2);
 float d1_meas = 100;
-//float heading = 0;
+float heading = 0;
 
 //float lastDistVal[] = {0,0,0};
 
@@ -39,42 +39,46 @@ class Filter : public TinyEKF {
       Filter()
       {   
           // approximate the process noise                  
-          this->setQ(0, 0, .0001);
-          this->setQ(1, 1, .0001);
+          this->setQ(0, 0, .0000001);
+          this->setQ(1, 1, .00001);
           // same for measurement noise
-          this->setR(0, 0, .0001);
-          this->setR(1, 1, .0001);
-          this->setR(2, 2, .0001);
-          this->setR(3, 3, .0001);
-          this->setR(4, 4, .0001);
-          this->setR(5, 5, .0001);
+          this->setR(0, 0, .01);
+          // this->setR(1, 1, .0001);
+          // this->setR(2, 2, .0001);
+          // this->setR(3, 3, .0001);
+          // this->setR(4, 4, .0001);
+          // this->setR(5, 5, .0001);
       }
   protected:
       void model(double fx[Nsta], double F[Nsta][Nsta], double hx[Mobs], double H[Mobs][Nsta])
       {
+      float delta_s = (millis() - sensor_timer);
       // Process model: x(k) = f(x(k-1))
-      fx[0] = this->x[0]; //+ this->x[1]; // heading update
+      fx[0] = this->x[0] + (this->x[1] * (delta_s/1000)); // heading update
       fx[1] = this->x[1]; // angular velocity update
+      
 
       // State transition matrix: F(k) = df(x(k))/dx(k-1)
       F[0][0] = 1; 
       F[1][1] = 1;
 
       // Observation model: z(k) = h(x(k))
-      hx[0] = this->x[0]; // accelerationX measurement
-      hx[1] = this->x[1]; // accelerationY measurement
-      hx[2] = this->x[2]; // accelerationZ measurement
-      hx[3] = this->x[3]; // gyroscopeX measurement
-      hx[4] = this->x[4]; // gyroscopeY measurement
-      hx[5] = this->x[5]; // gyroscopeZ measurement
+      // hx[0] = this->x[0]; // accelerationX measurement
+      // hx[1] = this->x[1]; // accelerationY measurement
+      // hx[2] = this->x[2]; // accelerationZ measurement
+      // hx[3] = this->x[3]; // gyroscopeX measurement
+      // hx[4] = this->x[4]; // gyroscopeY measurement
+      hx[0] = this->x[1]; // gyroscopeZ measurement
 
       // Observation matrix: H(k) = dh(x(k))/dx(k)
       H[0][0] = 1;
-      H[1][1] = 1;
-      H[2][2] = 1;
-      H[3][3] = 1;
-      H[4][4] = 1;
-      H[5][5] = 1;
+      // H[1][1] = 1;
+      // H[2][2] = 1;
+      // H[3][3] = 1;
+      // H[4][4] = 1;
+      // H[5][5] = 1;
+
+      sensor_timer = millis();
       }
 };
 
@@ -92,13 +96,9 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  // Read ultrasonic sensor measurements
 
-  //printSensorData(d1_meas);
-  //Serial.println((d1_meas));
-  //obstacle avoidance
-  //move();
+
+
 
   // getIMU();
   myICM.getAGMT();
@@ -111,27 +111,33 @@ void loop() {
   double gy = sensor->gyrY();
   double gz = sensor->gyrZ();
 
-  double sh[6] = {x, y, z, gx, gy, gz};
+  double sh[1] = {gz};
 
   ekf.step(sh);
 
-  Serial.print(sh[0]);
-  Serial.print(" accX | ");
-  Serial.print(sh[1]);
-  Serial.print(" accY | ");
-  Serial.print(sh[2]);
-  Serial.print(" accZ | ");
-  Serial.print(sh[3]);
-  Serial.print(" gX | ");
-  Serial.print(sh[4]);
-  Serial.print(" gY | ");
-  Serial.print(sh[5]);
-  Serial.println(" gZ | ");
-  Serial.print(ekf.getX(0));
+  float delta_s = (millis() - sensor_timer);
+
+  heading += gz * (delta_s/1000);
+
+  sensor_timer = millis();
+
+  // Serial.print(sh[0]);
+  // Serial.print(" accX | ");
+  // Serial.print(sh[1]);
+  // Serial.print(" accY | ");
+  // Serial.print(sh[2]);
+  // Serial.print(" accZ | ");
+  // Serial.print(sh[3]);
+  // Serial.print(" gX | ");
+  // Serial.print(sh[4]);
+  // Serial.print(" gY | ");
+  // Serial.print(sh[5]);
+  // Serial.println(" gZ | ");
+  Serial.print(ekf.getX(0) * 7.7);
   Serial.print(" heading | ");
-  Serial.print(ekf.getX(1));
-  Serial.print(" angular velocity | ");
-  Serial.println("");
+  // Serial.print(ekf.getX(1));
+  // Serial.print(" angular velocity | ");
+  // Serial.println("");
   Serial.println("");
 
 }
@@ -154,23 +160,6 @@ void getIMU(){
   } 
 }
 
-void printData(float x, float y, float z, float gx, float gy, float gz){
-  // Serial.print("Ax: ");
-  //   Serial.println(x);
-  //   Serial.print("Ay: ");
-  //   Serial.println(y);
-  //   Serial.print("Az: ");
-  //   Serial.println(z);
-    Serial.print("Gx: ");
-    Serial.println(gx);
-    Serial.print("Gy: ");
-    Serial.println(gy);
-    Serial.print("Gz: ");
-    Serial.println(gz);
-    Serial.println("");
-    delay(3000);
-     
-}
 void printSensorData(float sensorData){
   Serial.print("Sensor: ");
   Serial.println(sensorData);
@@ -217,6 +206,8 @@ void move(){
     }*/
   }
 }
+
+
 void stop(){
   Serial.println("Stoping");
   rightMotor->setSpeed(0);
@@ -236,6 +227,7 @@ void turnLeft(){
   rightMotor->run(FORWARD);
   leftMotor->run(BACKWARD);
 }
+
 bool checkRight(){
   if(readUltrasonic(trigPin3, echoPin3) > 10){
     return true;
@@ -255,7 +247,6 @@ bool checkLeft(){
 }
 
 int turnRight90(){
-  float heading = 0;
   float target = 0 - 90;
   turnRight();
 
@@ -312,7 +303,7 @@ int turnLeft90(){
   float target = heading - 90;
   turnLeft();
 
-  while (heading + 10 > target && heading - 10 > target){
+  while (heading > target){
     ICM_20948_I2C *sensor = &myICM;
     float z = sensor->gyrZ(); 
     float delta_s = (millis() - sensor_timer);
